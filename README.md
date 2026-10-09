@@ -45,7 +45,7 @@ bet T1.nii.gz T1_brain               # runs here, now
 fsl_sub -T 15 -R 4 bet T1.nii.gz T1_brain   # runs on a compute node; prints a job ID
 ```
 
-It is also what FSL's own tools use internally: `feat`, `melodic`, `bedpostx`, `probtrackx2`, `randomise_parallel`, `tbss` and others call `fsl_sub` themselves. **Once fsl_sub is configured for Slurm, those tools spread their work across the cluster automatically.** If it is *not* configured, they run everything on the login node — which RACC2 does not permit for heavy work.
+It is also what FSL's own tools use internally: `feat`, `melodic`, `bedpostx`, `probtrackx2`, `randomise_parallel`, `tbss` and others call `fsl_sub` themselves. **With the CINN config in place, those tools spread their work across the cluster automatically.**
 
 `fsl_sub` is developed by FMRIB, Oxford: <https://git.fmrib.ox.ac.uk/fsl/fsl_sub>.
 
@@ -87,32 +87,15 @@ The script does three things:
 | `export FSLSUB_CONF=.../config/fsl_sub_racc2.yml` | Tells fsl_sub about RACC2's partitions |
 | `export FSLSUB_EXTRA_TPC="--threads-per-core=1"` | RACC2 asks every job to use whole physical cores |
 
-### 2.4 Install the Slurm plugin (if needed)
+### 2.4 Check
 
-`fsl_sub` ships with FSL, but the **Slurm plugin** is separate. Without it, fsl_sub silently falls back to running jobs locally. Check:
-
-```bash
-fsl_sub --has_queues && echo "Slurm OK" || echo "running locally - plugin/config missing"
-```
-
-If it says "running locally", install the plugin into the same environment as fsl_sub:
-
-```bash
-# FSL's own conda environment (FSL ≥ 6.0.6):
-$FSLDIR/bin/conda install -p $FSLDIR -c https://fsl.fmrib.ox.ac.uk/fslconda/public fsl_sub_plugin_slurm
-# or, if fsl_sub was installed with pip:
-pip install --user fsl_sub_plugin_slurm
-```
-
-If FSL is a central module you can't write to, ask DTS (or the module maintainer) to add `fsl_sub_plugin_slurm`.
-
-### 2.5 Check
+Slurm and fsl_sub's Slurm plugin are already installed on RACC2, so there is nothing else to install. Confirm everything is wired up:
 
 ```bash
 bash ~/CINN_fsl_sub/examples/00_check_setup.sh
 ```
 
-It confirms FSL is loaded, that fsl_sub sees the Slurm queues, and submits a tiny test job.
+It confirms FSL is loaded, that fsl_sub is reading the CINN config and sees the Slurm partitions, and submits a tiny test job.
 
 ---
 
@@ -146,6 +129,17 @@ Full worked version: [`examples/01_single_job.sh`](examples/01_single_job.sh).
    | up to 1440 (24 h) | `short` | 24 h |
    | over 1440 | `long` | 30 days |
    | none | `short` (RACC2's default) | 24 h |
+
+   `long` is for small numbers of long jobs: RACC2 lets you run fewer jobs there and allocate less CPU and memory than in `short`. Split work into pieces under 24 h where you can.
+
+   **RACC2 partitions at a glance**
+
+   | Partition | Max time | Use for |
+   |---|---|---|
+   | `short` (default) | 24 h | most jobs; small/medium parallel and serial work |
+   | `long` | 30 days | a few long serial or medium parallel jobs |
+   | `scavenger` | 3 days (default 24 h) | big arrays of restartable jobs on all nodes — see [§8](#8-using-scavenger) |
+   | `racc_<project>` | project-specific | paid project allocations; access via the `racc_<project>` security group — see [§8](#8-using-scavenger) |
 
 2. **Set hard Slurm limits.** `-T` becomes `--time`, `-R` becomes `--mem`. A job that runs longer, or uses more memory, **is killed**. Over-estimate a little — but large over-estimates make your jobs wait longer in the queue.
 
@@ -238,7 +232,7 @@ Common `State` values from `sacct`: `TIMEOUT` → raise `-T`; `OUT_OF_MEMORY` �
 
 ## 8. Using scavenger
 
-`scavenger` runs on **all** RACC2 nodes (including newer and project-owned ones), allows up to 3 days and has no cap on how much you use at once — but your job **can be killed and re-queued** if the node's owners need it. Good for large arrays of short, restartable jobs.
+`scavenger` runs on **all** RACC2 nodes (including the newest, most efficient ones and project-owned nodes), allows up to 3 days and has no cap on how much you use at once — but your job **can be killed and re-queued** if the node's owners need it. RACC2 recommends it whenever practical for experienced users with large resource needs, and advises keeping to its 24 h default time limit. Good for large arrays of short, restartable jobs.
 
 It is deliberately excluded from automatic selection in our config, so you must ask for it:
 
@@ -251,6 +245,10 @@ With `-q`, keep `-R` at 8 or below and don't use `-s` (see [known issues](#10-kn
 ```bash
 fsl_sub -q scavenger -T 120 --extra="--mem=32G" --extra="--cpus-per-task=4" -t tasks.txt
 ```
+
+### Project partitions
+
+If your group pays for RACC2 capacity, you will have a partition named `racc_<project>` (access is controlled by a security group of the same name). See which partitions you can use with `sinfo -s`. To use one with fsl_sub, add it to `config/fsl_sub_racc2.yml` — there is a commented template at the bottom of the file — then select it with `-q racc_<project>`; the same `-q` caveat as scavenger applies.
 
 ---
 
@@ -269,7 +267,7 @@ Inside the job, fsl_sub sets `OMP_NUM_THREADS` (and similar) to the number of co
 ## 10. Known issues and gotchas
 
 - **`-q <partition>` combined with `-R` > 8 or `-s` crashes** (`unhashable type: 'list'`) in fsl_sub 2.11.0 / plugin 1.7.0. Avoid `-q` for `short`/`long` — `-T` picks them for you — and use the `--extra` form in [§8](#8-using-scavenger) for scavenger.
-- **No Slurm plugin = jobs run on the login node.** Always check `fsl_sub --has_queues` on a new account.
+- **`FSLSUB_CONF` must be set** (the setup script does it). Without it fsl_sub falls back to its default settings and won't know RACC2's partition limits.
 - **Jobs inherit your login environment** (`copy_environment: True`). Load FSL and any modules *before* submitting; activate the right conda env too.
 - **Shell syntax** (pipes, `>`, `;`, loops) must be wrapped: `fsl_sub -n bash -c "fslstats img -M > mean.txt"`. `-n` skips fsl_sub's "does this program exist?" check.
 - **Scratch is not backed up.** `/scratch2` and `/scratch3` are free and fast but can be cleared. Keep raw data in research storage (`/storage/research/...`) and copy final results back.

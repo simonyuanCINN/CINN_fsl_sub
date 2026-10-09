@@ -6,13 +6,15 @@
 #     export FSLSUB_CONF=/path/to/fsl_sub_racc2.yml
 #
 # Partition limits below follow the RACC2 knowledge base (October 2026):
-#   short     - default partition, 24 h max
-#   long      - 30 days max, fewer concurrent jobs
-#   scavenger - all nodes, 3 days max, jobs may be killed and re-queued
+#   https://research.reading.ac.uk/act/knowledgebase/racc2-batch-jobs/
+#   short          - default partition, 24 h max
+#   long           - 30 days max; fewer jobs and less CPU/memory allowed than short
+#   scavenger      - all nodes, 3 days max (24 h default), jobs may be killed and re-queued
+#   racc_<project> - paid project partitions (see template at the bottom of this file)
 # Compute nodes: 64 cores, 512 GB RAM (8 GB per core).
 # Check the live values on RACC2 with:  sinfo -s   and   scontrol show partition
 #
-# Requires fsl_sub >= 2.x and fsl_sub_plugin_slurm.
+# Slurm and fsl_sub_plugin_slurm are already installed on RACC2.
 
 method: slurm
 
@@ -49,7 +51,7 @@ queues:
     default: true
     smt: False
   long:
-    time: 43200        # minutes (30 days)
+    time: 43200        # minutes (30 days); per-user CPU/memory caps are lower than short
     max_size: 500
     slot_size: 8
     max_slots: 64
@@ -70,3 +72,14 @@ queues:
     priority: 0
     group: 9
     smt: False
+
+  # Project partition template - uncomment and rename if your group has one
+  # (list yours with: sinfo -s). Then submit with: fsl_sub -q racc_<project> ...
+  # racc_myproject:
+  #   time: 43200        # check the real limit: scontrol show partition racc_myproject
+  #   max_size: 500
+  #   slot_size: 8
+  #   max_slots: 0       # 0 = only used when named with -q
+  #   map_ram: false
+  #   priority: 0
+  #   group: 8

@@ -19,8 +19,8 @@ echo; echo "== Is fsl_sub talking to Slurm? =="
 if fsl_sub --has_queues; then
     echo "Yes - jobs will be submitted to the cluster."
 else
-    echo "NO - fsl_sub would run jobs on THIS login node (shell plugin)."
-    echo "Install the Slurm plugin and set FSLSUB_CONF (see README, step 2)."
+    echo "NO - fsl_sub is not using Slurm, so jobs would run on THIS login node."
+    echo "Check that FSL is loaded and FSLSUB_CONF is set (see README, step 2.3)."
     exit 1
 fi
 
