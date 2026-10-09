@@ -1,0 +1,72 @@
+# fsl_sub configuration for the University of Reading RACC2 cluster (Slurm)
+#
+# Install as your personal config:
+#     cp config/fsl_sub_racc2.yml ~/.fsl_sub.yml
+# or point to it explicitly:
+#     export FSLSUB_CONF=/path/to/fsl_sub_racc2.yml
+#
+# Partition limits below follow the RACC2 knowledge base (October 2026):
+#   short     - default partition, 24 h max
+#   long      - 30 days max, fewer concurrent jobs
+#   scavenger - all nodes, 3 days max, jobs may be killed and re-queued
+# Compute nodes: 64 cores, 512 GB RAM (8 GB per core).
+# Check the live values on RACC2 with:  sinfo -s   and   scontrol show partition
+#
+# Requires fsl_sub >= 2.x and fsl_sub_plugin_slurm.
+
+method: slurm
+
+method_opts:
+  slurm:
+    memory_in_gb: False
+    queues: True
+    copy_environment: True     # job inherits your shell (incl. FSLDIR, loaded modules' variables)
+    has_parallel_envs: False   # Slurm has no parallel environments; use -s <threads>
+    script_conf: True
+    mail_support: False
+    mail_mode: n
+    notify_ram_usage: True     # pass -R to Slurm as --mem (job is killed if it exceeds it)
+    set_time_limit: True       # pass -T to Slurm as --time (job is killed if it exceeds it)
+    array_holds: True
+    array_limit: True
+    projects: True
+    keep_jobscript: False
+    preserve_modules: False    # must be False when copy_environment is True (they are mutually exclusive)
+    add_module_paths: []
+    strict_dependencies: False # False = held jobs start even if the parent failed (afterany).
+                               # Set FSLSUB_STRICTDEPS=1 per-session to use afterok instead.
+    allow_nested_queuing: False
+
+queues:
+  short:
+    time: 1440         # minutes (24 h)
+    max_size: 500      # GB per job (node has 512 GB)
+    slot_size: 8       # GB per core
+    max_slots: 64      # cores per node
+    map_ram: false     # Slurm takes -R directly as --mem; no slot splitting needed
+    priority: 2
+    group: 1
+    default: true
+    smt: False
+  long:
+    time: 43200        # minutes (30 days)
+    max_size: 500
+    slot_size: 8
+    max_slots: 64
+    map_ram: false
+    priority: 1
+    group: 1
+    smt: False
+  # scavenger: 3 days max, runs on all nodes, but jobs can be killed and re-queued.
+  # max_slots: 0 keeps it OUT of automatic selection (fsl_sub picks the queue with the
+  # shortest sufficient time limit, so otherwise every 24 h - 3 day job would land here).
+  # Use it on purpose with:  fsl_sub -q scavenger ...   (see README, "Using scavenger")
+  scavenger:
+    time: 4320         # minutes (3 days)
+    max_size: 500
+    slot_size: 8
+    max_slots: 0
+    map_ram: false
+    priority: 0
+    group: 9
+    smt: False
