@@ -31,7 +31,8 @@ CINN_fsl_sub/
     ├── 00_check_setup.sh        ← is everything wired up?
     ├── 01_single_job.sh         ← one bet job
     ├── 02_array_bet.sh          ← bet for every subject as an array
-    └── 03_pipeline_holds.sh     ← bet → fast → summary, chained with holds
+    ├── 03_pipeline_holds.sh     ← bet → fast → summary, chained with holds
+    └── bnu_speech_pipeline/     ← a complete real study: FEAT, FIX, group ICA, dual regression, seed-based connectivity
 ```
 
 ---
@@ -261,6 +262,10 @@ fsl_sub -s 8 -T 240 -R 32 -N eddy_sub01 -l logs eddy --imain=... --nthr=8
 ```
 
 Inside the job, fsl_sub sets `OMP_NUM_THREADS` (and similar) to the number of cores, and `$FSLSUB_NSLOTS` names the variable holding it (`${!FSLSUB_NSLOTS}` in bash). Single-threaded FSL tools (`bet`, `flirt`, `fast`) gain nothing from `-s`.
+
+### A complete real-world example
+
+[`examples/bnu_speech_pipeline/`](examples/bnu_speech_pipeline/) holds the scripts from a full task + resting-state fMRI study (48 participants): anatomical and fieldmap preprocessing, FEAT from template `.fsf` files, FIX cleaning, group ICA, dual regression, FreeSurfer and seed-based connectivity. They were written for FMRIB's jalapeño cluster, so their README explains how to translate each `fsl_sub` line to RACC2.
 
 ---
 
