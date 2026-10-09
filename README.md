@@ -28,7 +28,6 @@ CINN_fsl_sub/
 ├── config/fsl_sub_racc2.yml     ← fsl_sub settings for RACC2's Slurm partitions
 ├── setup/racc2_fsl_env.sh       ← source from ~/.bashrc: loads FSL, points to the config
 └── examples/
-    ├── 00_check_setup.sh        ← is everything wired up?
     ├── 01_single_job.sh         ← one bet job
     ├── 02_array_bet.sh          ← bet for every subject as an array
     ├── 03_pipeline_holds.sh     ← bet → fast → summary, chained with holds
@@ -88,15 +87,7 @@ The script does three things:
 | `export FSLSUB_CONF=.../config/fsl_sub_racc2.yml` | Tells fsl_sub about RACC2's partitions |
 | `export FSLSUB_EXTRA_TPC="--threads-per-core=1"` | RACC2 asks every job to use whole physical cores |
 
-### 2.4 Check
-
-Slurm and fsl_sub's Slurm plugin are already installed on RACC2, so there is nothing else to install. Confirm everything is wired up:
-
-```bash
-bash ~/CINN_fsl_sub/examples/00_check_setup.sh
-```
-
-It confirms FSL is loaded, that fsl_sub is reading the CINN config and sees the Slurm partitions, and submits a tiny test job.
+Slurm and fsl_sub's Slurm plugin are already installed and working on RACC2, so that's all the setup needed.
 
 ---
 
