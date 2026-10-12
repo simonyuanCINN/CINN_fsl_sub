@@ -87,7 +87,23 @@ The script does three things:
 | `export FSLSUB_CONF=.../config/fsl_sub_racc2.yml` | Tells fsl_sub about RACC2's partitions |
 | `export FSLSUB_EXTRA_TPC="--threads-per-core=1"` | RACC2 asks every job to use whole physical cores |
 
-Slurm and fsl_sub's Slurm plugin are already installed and working on RACC2, so that's all the setup needed.
+Slurm and fsl_sub's Slurm plugin are already installed and working on RACC2.
+
+### 2.4 Shortcuts to scratch and research storage
+
+Your data will mostly live outside your small home directory. Symbolic links let you reach it with `cd ~/scratch` instead of typing the full path:
+
+```bash
+ls -d /scratch2/$USER /scratch3/$USER            # find which scratch folder is yours
+ln -s /scratch2/$USER ~/scratch                  # use the path the ls showed
+ln -s /storage/research/<project> ~/research     # optional: your project's research storage
+```
+
+`ls -l ~` shows them as `scratch -> /scratch2/<username>`.
+
+- **Getting scratch space:** request it through the DTS Self Service Portal. It may be on `/scratch2` or `/scratch3`, or under a project name; link whichever path you were given.
+- **Removing a shortcut:** `rm ~/scratch` deletes only the link. Never `rm -r ~/scratch/` — the trailing slash deletes the folder's contents.
+- **Scratch is not backed up** and can be cleared. Keep raw data and anything you can't regenerate in research storage.
 
 ---
 
