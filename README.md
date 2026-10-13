@@ -4,7 +4,7 @@
 
 A teaching template for members of the Centre for Integrative Neuroscience and Neurodynamics (CINN). Work through it top to bottom the first time; afterwards, copy the example scripts and edit the paths.
 
-> Maintainer: Simon Yuan (CINN). Tested against fsl_sub 2.11.0 with fsl_sub_plugin_slurm 1.7.0. RACC2 partition details are from the RACC2 knowledge base as of October 2026; check `sinfo -s` for current values.
+> Maintainer: Simon Yuan (CINN). Uses the CINN FSL 6.0.7.23 install on RACC2 (`module load fsl/6.0.7.23`), which includes the fsl_sub Slurm plugin. RACC2 partition details are from the RACC2 knowledge base as of October 2026; check `sinfo -s` for current values.
 
 ---
 
@@ -21,12 +21,14 @@ A teaching template for members of the Centre for Integrative Neuroscience and N
 9. [Multi-threaded jobs](#9-multi-threaded-jobs)
 10. [Known issues and gotchas](#10-known-issues-and-gotchas)
 11. [Cheat sheet](#11-cheat-sheet)
+12. [For maintainers: installing FSL on RACC2](#12-for-maintainers-installing-fsl-on-racc2)
 
 ```
 CINN_fsl_sub/
 ├── README.md                    ← this tutorial
 ├── config/fsl_sub_racc2.yml     ← fsl_sub settings for RACC2's Slurm partitions
-├── setup/racc2_fsl_env.sh       ← source from ~/.bashrc: loads FSL, points to the config
+├── modules/fsl/6.0.7.23.lua     ← the Lmod module file for the CINN FSL install
+├── setup/racc2_fsl_env.sh       ← source from ~/.bashrc: loads FSL and RACC2 settings
 └── examples/
     ├── 01_single_job.sh         ← one bet job
     ├── 02_array_bet.sh          ← bet for every subject as an array
@@ -72,22 +74,28 @@ git clone https://github.com/simonyuanCINN/CINN_fsl_sub.git
 
 ### 2.3 Make FSL and fsl_sub available
 
-Edit the lines marked `EDIT ME` in `setup/racc2_fsl_env.sh`, then add it to your `~/.bashrc`:
+Add the setup script to your `~/.bashrc`:
 
 ```bash
 echo 'source ~/CINN_fsl_sub/setup/racc2_fsl_env.sh' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-The script does three things:
+The script does two things:
 
 | What | Why |
 |---|---|
-| Loads FSL (`module load fsl`, or your own `$FSLDIR`) | Check what exists with `module avail fsl` |
-| `export FSLSUB_CONF=.../config/fsl_sub_racc2.yml` | Tells fsl_sub about RACC2's partitions |
+| `module load fsl/6.0.7.23` | The CINN FSL install. It includes fsl_sub's Slurm plugin and the CINN RACC2 config, so `fsl_sub` submits to Slurm with no extra setup. |
 | `export FSLSUB_EXTRA_TPC="--threads-per-core=1"` | RACC2 asks every job to use whole physical cores |
 
-Slurm and fsl_sub's Slurm plugin are already installed and working on RACC2.
+> **Use `fsl/6.0.7.23`, not the older `/software/CINN/fsl/6.0.7.12`.** The older install has no Slurm plugin, so its `fsl_sub` silently runs every job on the login node: FEAT still runs, but nothing appears in `squeue`. If your `~/.bashrc` adds `/software/CINN/fsl/6.0.7.12` to `PATH`, remove that line.
+
+Check you're on the right one (in a new login):
+
+```bash
+which fsl_sub                              # /software/CINN/fsl/6.0.7.23/share/fsl/bin/fsl_sub
+fsl_sub --show_config | grep "^method"     # method: slurm
+```
 
 ### 2.4 Shortcuts to scratch and research storage
 
@@ -279,7 +287,7 @@ Inside the job, fsl_sub sets `OMP_NUM_THREADS` (and similar) to the number of co
 ## 10. Known issues and gotchas
 
 - **`-q <partition>` combined with `-R` > 8 or `-s` crashes** (`unhashable type: 'list'`) in fsl_sub 2.11.0 / plugin 1.7.0. Avoid `-q` for `short`/`long` — `-T` picks them for you — and use the `--extra` form in [§8](#8-using-scavenger) for scavenger.
-- **`FSLSUB_CONF` must be set** (the setup script does it). Without it fsl_sub falls back to its default settings and won't know RACC2's partition limits.
+- **Jobs run but don't appear in `squeue`?** You're using an FSL without the Slurm plugin (e.g. 6.0.7.12), so fsl_sub is running them on the login node. Run `which fsl_sub` and `fsl_sub --show_config | grep "^method"`; you want `/software/CINN/fsl/6.0.7.23/...` and `method: slurm`.
 - **Jobs inherit your login environment** (`copy_environment: True`). Load FSL and any modules *before* submitting; activate the right conda env too.
 - **Shell syntax** (pipes, `>`, `;`, loops) must be wrapped: `fsl_sub -n bash -c "fslstats img -M > mean.txt"`. `-n` skips fsl_sub's "does this program exist?" check.
 - **Scratch is not backed up.** `/scratch2` and `/scratch3` are free and fast but can be cleared. Keep raw data in research storage (`/storage/research/...`) and copy final results back.
@@ -312,6 +320,46 @@ fsl_sub [options] <command and its arguments>
   FSLSUB_STRICTDEPS=1   held jobs need parents to succeed
   fsl_sub_report ID     job status
 ```
+
+---
+
+## 12. For maintainers: installing FSL on RACC2
+
+How `/software/CINN/fsl/6.0.7.23` was set up, for whoever installs the next version. You need write access to `/software/CINN/fsl` and `/software/modules/CINN`.
+
+**1. Install FSL** next to the existing versions. `getfsl.sh` needs `bzip2`, which RACC2 doesn't provide on `PATH`; borrow the anaconda module's copy:
+
+```bash
+mkdir -p ~/bin && ln -sf /software/applications/anaconda/2023.09-0/bin/bzip2 ~/bin/bzip2
+export PATH=~/bin:$PATH
+
+module purge; unset FSLDIR; umask 022
+curl -Ls https://fsl.fmrib.ox.ac.uk/fsldownloads/fslconda/releases/getfsl.sh | sh -s -- /software/CINN/fsl/<version>
+```
+
+Give the destination after `-s --`, otherwise it installs to `~/fsl`. Wait for `FSL successfully installed`.
+
+**2. Add the Slurm plugin and the CINN config:**
+
+```bash
+export FSLDIR=/software/CINN/fsl/<version>
+$FSLDIR/bin/fsl_sub_config -h      # if it lists {shell,slurm}, skip the next line
+$FSLDIR/bin/conda install -p $FSLDIR -c https://fsl.fmrib.ox.ac.uk/fslconda/public fsl_sub_plugin_slurm
+cp ~/CINN_fsl_sub/config/fsl_sub_racc2.yml $FSLDIR/etc/fslconf/fsl_sub.yml
+```
+
+**3. Add a module file:** copy [`modules/fsl/6.0.7.23.lua`](modules/fsl/6.0.7.23.lua) to `/software/modules/CINN/fsl/<version>.lua` and change the version in it. Lmod makes the highest version the default for `module load fsl`.
+
+**4. Check in a fresh login:**
+
+```bash
+module load fsl/<version>
+which fsl_sub feat                        # both under /software/CINN/fsl/<version>
+fsl_sub --show_config | grep "^method"    # method: slurm
+fsl_sub -T 10 -R 2 -N test hostname && squeue -u $USER
+```
+
+Then update the version in `setup/racc2_fsl_env.sh` and this README.
 
 ---
 

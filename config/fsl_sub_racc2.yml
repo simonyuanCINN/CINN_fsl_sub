@@ -1,6 +1,10 @@
 # fsl_sub configuration for the University of Reading RACC2 cluster (Slurm)
 #
-# Install as your personal config:
+# On RACC2 this file is installed inside the CINN FSL as
+#     /software/CINN/fsl/6.0.7.23/etc/fslconf/fsl_sub.yml
+# so everyone who runs `module load fsl/6.0.7.23` uses it automatically.
+#
+# To use a personal, edited copy instead:
 #     cp config/fsl_sub_racc2.yml ~/.fsl_sub.yml
 # or point to it explicitly:
 #     export FSLSUB_CONF=/path/to/fsl_sub_racc2.yml
@@ -14,7 +18,8 @@
 # Compute nodes: 64 cores, 512 GB RAM (8 GB per core).
 # Check the live values on RACC2 with:  sinfo -s   and   scontrol show partition
 #
-# Slurm and fsl_sub_plugin_slurm are already installed on RACC2.
+# Requires fsl_sub_plugin_slurm, which is installed in /software/CINN/fsl/6.0.7.23
+# (not in the older 6.0.7.12 install).
 
 method: slurm
 
