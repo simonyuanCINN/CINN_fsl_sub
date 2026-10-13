@@ -5,7 +5,7 @@
 # so everyone who runs `module load fsl/6.0.7.23` uses it automatically.
 #
 # To use a personal, edited copy instead:
-#     cp config/fsl_sub_racc2.yml ~/.fsl_sub.yml
+#     curl -Ls https://raw.githubusercontent.com/simonyuanCINN/CINN_fsl_sub/main/config/fsl_sub_racc2.yml -o ~/.fsl_sub.yml
 # or point to it explicitly:
 #     export FSLSUB_CONF=/path/to/fsl_sub_racc2.yml
 #
